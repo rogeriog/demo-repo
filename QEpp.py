@@ -7,6 +7,7 @@ import itertools
 import matplotlib.pyplot as plt
 from scipy import integrate
 import MinFlow.banduppy as banduppy
+## QEpp.py
 class PPcalc():
     def __init__(self,prefix, calculation, inputfile, inputdata):
         self.prefix=prefix
