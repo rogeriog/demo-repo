@@ -87,6 +87,9 @@ def getQEexec(calc,cluster,user):
         QEdir=""
     else:
         raise("cluster specified not implemented, edit cluster_sets.py on MinFlow directory.")
+    #### special cases
+    if cluster == 'cesup_fermi_gpu' and (calc == 'simple' or calc == 'simple_ip'):
+        QEdir="/home/u/{user}/qe-6.4.1/bin/".format(user=user) ## simple not compiled in gpu version
     return QEdir+QEexec_dict[calc]
 
 def getPseudoDir(cluster="local",user="user"):

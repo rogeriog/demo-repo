@@ -412,6 +412,7 @@ def gencalc_absorption(calcdict,kgrid_for_absorption,simple_dict=None,
     ## cluster, have to give cluster parameters to do tmp calculation that gets
     ## complete nscf grid.
     ##--set simple scf calculation to be run later--
+    calcdict['calculation']='scf' ### have to be scf to do the test.
     calc=QEcalc(**calcdict)
     if not from_previous_scf or not from_previous_nscf:
         calc.write_input()
@@ -462,7 +463,7 @@ def gencalc_absorption(calcdict,kgrid_for_absorption,simple_dict=None,
 
     if not from_previous_nscf:
         calc_nscf.write_input()
- 
+
     def_simple_dict={ 'prefix':calc.prefix,
     'calc_mode':1, 'num_nbndv': nbnd,
     'num_val':nbnd, 'num_cond':100,
@@ -478,7 +479,7 @@ def gencalc_absorption(calcdict,kgrid_for_absorption,simple_dict=None,
             def_simple_dict[key]=value
     ## more keys may be necessary in the template
     inputsimple_str="""&inputsimple
-prefix='{prefix}'               
+prefix='{prefix}'
 outdir='./OUTPUT'
 calc_mode={calc_mode}
 num_nbndv={num_nbndv}
@@ -498,9 +499,9 @@ nonlocal_commutator={nonlocal_commutator}
     ### now for simpleip input
     #write simpleip input from dict
     def_simpleip_dict={ 'prefix':calc.prefix,
-    'interp_grid(1)':calctmp.ktuple[0]*3,
-    'interp_grid(2)':calctmp.ktuple[1]*3,
-    'interp_grid(3)':calctmp.ktuple[2]*3,
+    'interp_grid(1)':calctmp.ktuple[0],
+    'interp_grid(2)':calctmp.ktuple[1],
+    'interp_grid(3)':calctmp.ktuple[2],
     'fermi_degauss' :  0.002,
     'fermi_ngauss' :  -99,
     'drude_degauss':  0.002,
@@ -520,11 +521,11 @@ simpleip_in%prefix = '{prefix}'
 simpleip_in%outdir = './OUTPUT'
 simpleip_in%interp_grid(1) = {interp_grid(1)}
 simpleip_in%interp_grid(2) = {interp_grid(2)}
-simpleip_in%interp_grid(3) = {interp_grid(3)} 
+simpleip_in%interp_grid(3) = {interp_grid(3)}
 simpleip_in%fermi_degauss = {fermi_degauss}
 simpleip_in%fermi_ngauss = {fermi_ngauss}
 simpleip_in%drude_degauss = {drude_degauss}
-simpleip_in%wmin = {wmin} 
+simpleip_in%wmin = {wmin}
 simpleip_in%wmax = {wmax}
 simpleip_in%nw = {nw}
 simpleip_in%inter_broadening = {inter_broadening}

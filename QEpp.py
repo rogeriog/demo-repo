@@ -252,7 +252,7 @@ filpdos='./PP/PDOS_BANDS/{prefix}'
 
 
 ############################# PYTHON FUNCTIONS OVER PP DATA #####################################
-def PP_processing(prefix,mode="charge_geometry+potential_gap+pdos",**kwargs):
+def PP_processing(prefix,mode="charge_geometry+gap+pdos",**kwargs):
     mode=mode.split("+")
     if "charge_geometry" in mode:
         try:
@@ -262,13 +262,22 @@ def PP_processing(prefix,mode="charge_geometry+potential_gap+pdos",**kwargs):
         baderPP(prefix)
         bader_average_and_bonds(prefix)
         os.chdir("../")
-    if "potential_gap" in mode:
+    if "potential" in mode:
         try:
             os.chdir("PP")
         except FileNotFoundError as error:
             print(error)
-        os.rename("../avg.dat", "avg."+prefix+".dat")  ## avg.dat is written on folder of execution, have to mv it
-        potential_average(filename="avg."+prefix+".dat")
+        try:
+            os.rename("../avg.dat", "avg."+prefix+".dat")  ## avg.dat is written on folder of execution, have to mv it
+            potential_average(filename="avg."+prefix+".dat")
+        except Exception as error:
+            print(error)
+        os.chdir("../")
+    if "gap" in mode:
+        try:
+            os.chdir("PP")
+        except FileNotFoundError as error:
+            print(error)
         getGap()
         os.chdir("../")
     if "pdos" in mode:
@@ -284,11 +293,13 @@ def PP_processing(prefix,mode="charge_geometry+potential_gap+pdos",**kwargs):
             os.chdir("PP")
         except FileNotFoundError as error:
             print(error)
-        plot_bands(prefix,indexes=kwargs.get('indexes'),fermi=kwargs.get('fermi',0.0),label=kwargs.get('label',''),
+        try:
+            plot_bands(prefix,indexes=kwargs.get('indexes'),fermi=kwargs.get('fermi',0.0),label=kwargs.get('label',''),
         color=kwargs.get('color','black'),RANGE_VB=kwargs.get('RANGE_VB',1.5),RANGE_CB=kwargs.get('RANGE_CB',5),
-        redstates=kwargs.get('redstates',[]),greenstates=kwargs.get('greenstates',[]),bluestates=kwargs.get('bluestates',[]),
-        labelsprojs=kwargs.get('labelsprojs',["","",""]),maxcontrast=kwargs.get("maxcontrast",True),
+        redstates=kwargs.get('redstates',[]),greenstates=kwargs.get('greenstates',[]),bluestates=kwargs.get('bluestates',[]), labelsprojs=kwargs.get('labelsprojs',["","",""]),maxcontrast=kwargs.get("maxcontrast",True), 
         contrast_ratios=kwargs.get("contrast_ratios",[1,1,1]))
+        except Exception as error:
+            print(error)
         os.chdir("../")
 
 
