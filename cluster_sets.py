@@ -1,4 +1,3 @@
-
 def get_template(cluster):
     if cluster == 'cesup_fermi' or cluster == 'cesup_fermi_gpu' or 'cesup_fermi2' :
         TEMPLATE= """#!/bin/sh

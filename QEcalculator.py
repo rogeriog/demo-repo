@@ -295,15 +295,22 @@ def execute(cmd):   ## execute
     for jobid in iter(popen.stdout.readline, ""):
         return [jobid] 
 
-def relax_with_gpu(sh_file):
+def relax_with_gpu(sh_file, **kwargs):
     import os, shlex, sys,shutil
     prefix=sh_file.split(".")[1]
     OUTPUT="out."+prefix+".vc-relax"
     INPUT=prefix+".vc-relax.in"
     ibrav0=True ### looks for CELL_PARAMETERS
+    try:
+        with open(OUTPUT) as f:
+            pass
+    except:
+        OUTPUT="out."+prefix+".relax"
+        INPUT=prefix+".relax.in"
+        ibrav0=False
     end_relaxation=False
     iteration=0
-    while not end_relaxation :
+    while not end_relaxation and iteration < kwargs.get('iterations',50):
         iteration += 1
         nat=0
         data="" ##holds structure information
@@ -332,10 +339,15 @@ def relax_with_gpu(sh_file):
                    else :
                        if n == nat+2:
                            read=False
+        if data == "":
+            end_relaxation=True
 
         with open(INPUT) as f:
           text=f.read()
-          pattern = re.compile('CELL_PARAMETERS.*', re.DOTALL|re.I)
+          if ibrav0:
+              pattern = re.compile('CELL_PARAMETERS.*', re.DOTALL|re.I)
+          else:
+              pattern = re.compile('ATOMIC_POSITIONS.*', re.DOTALL|re.I)
           newtext=re.sub(pattern, data, text)
 
         with open(INPUT,"w") as f:
@@ -354,6 +366,8 @@ def relax_with_gpu(sh_file):
                done=re.search("JOB DONE.",line)
                if done != None :
                    end_relaxation=True
+
+
 
 
 
@@ -491,7 +505,8 @@ nkpoints(1)={nkpoints(1)}
 nkpoints(2)={nkpoints(2)}
 nkpoints(3)={nkpoints(3)}
 nonlocal_commutator={nonlocal_commutator}
-/""".format(**def_simple_dict)
+/
+""".format(**def_simple_dict)
     with open("{prefix}.simple.in".format(prefix=calc.prefix),'w') as f:
         f.write(inputsimple_str)
     calc_simple=QEcalc2(calc.prefix,'simple')
@@ -532,7 +547,8 @@ simpleip_in%inter_broadening = {inter_broadening}
 simpleip_in%intra_broadening = {intra_broadening}
 simpleip_in%nonlocal_commutator= {nonlocal_commutator}
 simpleip_in%nonlocal_interpolation= {nonlocal_interpolation}
-/""".format(**def_simpleip_dict)
+/
+""".format(**def_simpleip_dict)
     
     with open("{prefix}.simple_ip.in".format(prefix=calc.prefix),'w') as f:
         f.write(inputsimpleip_str)

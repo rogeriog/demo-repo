@@ -7,6 +7,7 @@ import itertools
 import matplotlib.pyplot as plt
 from scipy import integrate
 import MinFlow.banduppy as banduppy
+from MinFlow.special_functions import generate_xsf_file, get_geometry_data 
 ## QEpp.py
 class PPcalc():
     def __init__(self,prefix, calculation, inputfile, inputdata):
@@ -27,6 +28,24 @@ def preparePP(prefix, nelectron=0,structure=0):
         os.mkdir("PP")
     except OSError as error: 
         print(error)
+
+    ## to obtain the xsf file for the relaxed structure and
+    ## to calculate all relevant geometry information
+#    try:
+#        generate_xsf_file('out.'+prefix+'.scf')
+#    except:
+#        try:
+#            generate_xsf_file('out.'+prefix+'.vc-relax')
+#        except:
+#            try:
+#                generate_xsf_file('out.'+prefix+'.relax')
+#            except Exception as e:
+#                print(e)
+#    try:
+#        get_geometry_data(structure)
+#    except Exception as e:
+#        print(e)
+
 ## DOS
     inp="PP/{prefix}.dos.in".format(prefix=prefix)
     with open(inp,"w") as f:
@@ -254,7 +273,23 @@ filpdos='./PP/PDOS_BANDS/{prefix}'
 ############################# PYTHON FUNCTIONS OVER PP DATA #####################################
 def PP_processing(prefix,mode="charge_geometry+gap+pdos",**kwargs):
     mode=mode.split("+")
+    print(kwargs,kwargs.get('structure',None))
     if "charge_geometry" in mode:
+        try:
+            generate_xsf_file('out.'+prefix+'.scf')
+        except:
+            try:
+                generate_xsf_file('out.'+prefix+'.vc-relax')
+            except:
+                try:
+                    generate_xsf_file('out.'+prefix+'.relax')
+                except Exception as e:
+                    print(e)
+        if kwargs.get('structure',None) is not None:
+            try:
+                get_geometry_data(kwargs['structure'])
+            except Exception as e:
+                print(e)
         try:
             os.chdir("PP")
         except FileNotFoundError as error:
@@ -286,20 +321,20 @@ def PP_processing(prefix,mode="charge_geometry+gap+pdos",**kwargs):
         except FileNotFoundError as error:
             print(error)
         sumPDOS(prefix)
-        plot_PDOS(prefix)
+        plot_PDOS(prefix,fermi=kwargs.get('fermi',0.0),
+        RANGE_VB=kwargs.get('RANGE_VB',5),RANGE_CB=kwargs.get('RANGE_CB',5))
         os.chdir("../../")
     if "bands" in mode:
         try:
             os.chdir("PP")
         except FileNotFoundError as error:
             print(error)
-        try:
-            plot_bands(prefix,indexes=kwargs.get('indexes'),fermi=kwargs.get('fermi',0.0),label=kwargs.get('label',''),
+        plot_bands(prefix,indexes=kwargs.get('indexes'),fermi=kwargs.get('fermi',0.0),label=kwargs.get('label',''),
         color=kwargs.get('color','black'),RANGE_VB=kwargs.get('RANGE_VB',1.5),RANGE_CB=kwargs.get('RANGE_CB',5),
         redstates=kwargs.get('redstates',[]),greenstates=kwargs.get('greenstates',[]),bluestates=kwargs.get('bluestates',[]), labelsprojs=kwargs.get('labelsprojs',["","",""]),maxcontrast=kwargs.get("maxcontrast",True), 
         contrast_ratios=kwargs.get("contrast_ratios",[1,1,1]))
-        except Exception as error:
-            print(error)
+        #except Exception as error:
+        #    print(error)
         os.chdir("../")
 
 
@@ -1307,7 +1342,7 @@ def get_Efermi(prefix):
         except:
             print("Could not find fermi energy.")
 
-def plot_PDOS(prefix):
+def plot_PDOS(prefix,RANGE_VB=2,RANGE_CB=7,fermi=0):
 	import sys
 	import os
 	import fnmatch, re
@@ -1331,10 +1366,9 @@ def plot_PDOS(prefix):
 	PREFIX=prefix
 	
 	# Some default variables
-	fermi=0
 	nspin=1
 	graphtitle=""
-	min_x,max_x=-2,7
+	min_x,max_x=-RANGE_VB,RANGE_CB
 	min_y,max_y="",""
 	wfcnumber='X'
 	wfc='X'
@@ -2236,20 +2270,22 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
         if id_structure == 0 :  ## only does it for the first plot.
             if nspin:
                 n_bandsections=int((len(bandsections)-1)/2)  ## bandsections will be half
+                print(bandsections,n_bandsections)
                 fig, ax = plt.subplots(1,n_bandsections,sharey=True,
                                 squeeze=True, gridspec_kw={'wspace': 0.3,'width_ratios': deltas[:-n_bandsections]})
     
             else:
                 n_bandsections=(len(bandsections)-1)
+                print(n_bandsections)
                 fig, ax = plt.subplots(1,n_bandsections,sharey=True,
                                 squeeze=True, gridspec_kw={'wspace': 0.3,'width_ratios': deltas})    
     
-        if nspin and n_bandsections == 2: ## no subsections on band plot
-            ax=[ax]  ## no subscript problem
+#        if nspin and n_bandsections == 2: ## no subsections on band plot
+#            ax=[ax]  ## no subscript problem
     
         if n_bandsections == 1: ## no subsections on band plot
             ax=[ax]  ## no subscript problem
-    
+        print('axes',ax,ax[0],'nspin',nspin) 
         ax[0].set_ylabel("Energy (eV)")
     
         hspoints = Symmetries(symfile)

@@ -578,10 +578,29 @@ engine = espresso
 
 
 
-def runAFLOW_ACBN0(prefix="",local=False):
+def runAFLOW_ACBN0(prefix="",local=False,mode="default"):
     import ast
+    def readUvals():
+        lastU_data=""
+        with open("Uvals.log","r") as Ulog:
+            for line in Ulog:
+                pass
+            lastU_data = line.rstrip()
+        Uvals = ast.literal_eval(lastU_data)
+        return Uvals
+
     with open("ID","r") as f:
         prefix_aflowpi=f.readline().split("_")[0]
+    if mode == "read_Uvals":
+        try:
+            Uvals=readUvals()
+        except:
+            AFLOWdir="ACBN0/{prefix}/ACBN0_{prefix}_0001/".format(prefix=prefix)
+            Uvals_log=prefix_aflowpi+"_03_uValLog.log"
+            shutil.copyfile(AFLOWdir+Uvals_log, "Uvals.log")
+            Uvals=readUvals
+        return Uvals
+
     AFLOWdir="ACBN0/{prefix}/ACBN0_{prefix}_0001/".format(prefix=prefix)
     os.chdir(AFLOWdir)
     ACBN0pyfiles=["_"+prefix_aflowpi+"_01.py","_"+prefix_aflowpi+"_02.py","_"+prefix_aflowpi+"_03.py"]
@@ -601,13 +620,9 @@ def runAFLOW_ACBN0(prefix="",local=False):
                     notconverged=True
     if finish_acbn0 and not notconverged:
         Uvals_log=prefix_aflowpi+"_03_uValLog.log"
-        lastU_data=""
-        with open(Uvals_log,"r") as Ulog:
-            for line in Ulog:
-                pass
-            lastU_data = line
-        Uvals = ast.literal_eval(lastU_data)
+        shutil.copyfile(Uvals_log, "../../../Uvals.log") ## copyfile to main folder
         os.chdir("../../../")
+        Uvals=readUvals()
         return Uvals
     else:
         raise("ACBN0 Uvals not converged or incomplete, check what happened.")
