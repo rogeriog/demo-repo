@@ -245,10 +245,10 @@ def get_geometry_data(structure):
     c={np.round(structure.cell.lengths()[2],4)}\n\n"
     text+=f" alpha={np.round(structure.cell.angles()[0],4)}, \n beta={np.round(structure.cell.angles()[1],4)},\n\
     gamma={np.round(structure.cell.angles()[2],4)}\n"
-    text+=f" ab_Area={np.linalg.norm(np.cross(structure.cell[0],structure.cell[1]))}, \n 
-    bc_Area={np.linalg.norm(np.cross(structure.cell[1],structure.cell[2]))}, \n
-    ac_Area={np.linalg.norm(np.cross(structure.cell[0],structure.cell[2]))}, \n
-    cell_volume={np.dot(structure.cell[0],np.cross(structure.cell[1],structure.cell[2]))} \n" 
+    text+=f"""ab_Area={np.linalg.norm(np.cross(structure.cell[0],structure.cell[1]))},
+    bc_Area={np.linalg.norm(np.cross(structure.cell[1],structure.cell[2]))},
+    ac_Area={np.linalg.norm(np.cross(structure.cell[0],structure.cell[2]))},
+    cell_volume={np.dot(structure.cell[0],np.cross(structure.cell[1],structure.cell[2]))}"""
 
     text+=f"\n\tNUMBER AND AVERAGE LENGTH OF BONDS:\n"
     text+=f"--------------------------------------------------------\n"
