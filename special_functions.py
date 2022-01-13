@@ -157,16 +157,268 @@ def get_atom_color(atom):
     :param str atom: symbol for atom
     """
     import pandas as pd
-    df_colors = pd.read_csv("jmolcolors.csv")
+    import MinFlow
+    folder=os.path.dirname(MinFlow.__file__)
+    df_colors = pd.read_csv(folder+"/jmolcolors.csv")
     r = df_colors[df_colors['atom'] == atom]['R'].values[0] / 255.0
     g = df_colors[df_colors['atom'] == atom]['G'].values[0] / 255.0
     b = df_colors[df_colors['atom'] == atom]['B'].values[0] / 255.0
     return (r, g, b)
 
-def plot_surface_geometry(structure,surface_direction='z'):
-    prefix=get_name_from_structure(structure)
-    positions=structure.get_positions()
-    symbols=structure.get_chemical_symbols()
+
+def plot_cluster_geometry(structure,center,measurement='rxy_z',identifier="",showplot=False,
+                          label="",**kwargs):
+    if isinstance(structure,list):
+        mode="comparative"
+    else:
+        mode="default"
+
+    if mode == "default":
+        prefix=get_name_from_structure(structure)
+        positions=structure.get_positions()
+        symbols=structure.get_chemical_symbols()
+
+        from collections import OrderedDict  ## OrderedDict is predictable set is not.
+        different_symbols=list(OrderedDict.fromkeys(symbols))
+        colors=[get_atom_color(element) for element in different_symbols]
+         
+        
+        if measurement=='rxy_z': 
+
+            positions_rxy=positions[:,:2] ## get x,y coords
+            positions_rxy=positions_rxy-np.array(center)[:2]
+            positions_rxy=np.array([np.linalg.norm(r) for r in positions_rxy])
+            symbol_positions_rxy=np.column_stack((symbols,positions_rxy))
+            
+            positions_rxy_by_symbol=[]
+            for element in different_symbols:
+                matches=np.where(symbol_positions_rxy[:,0]==element)
+                positions_rxy_by_symbol.append(symbol_positions_rxy[matches[0]])
+            positions_rxy=np.array([ pos[:,1].astype(np.float) for pos in positions_rxy_by_symbol],dtype=object)
+            range_rxy=max([max(a) for a in positions_rxy])-min([min(a) for a in positions_rxy])
+
+            positions_z=positions[:,2] ## get z coords
+            positions_z=positions_z-np.array(center)[2]
+            symbol_positions_z=np.column_stack((symbols,positions_z))
+            
+            positions_z_by_symbol=[]
+            for element in different_symbols:
+                matches=np.where(symbol_positions_z[:,0]==element)
+                positions_z_by_symbol.append(symbol_positions_z[matches[0]])
+            positions_z=np.array([ pos[:,1].astype(np.float) for pos in positions_z_by_symbol],dtype=object)
+            range_z=max([max(a) for a in positions_z])-min([min(a) for a in positions_z])
+#            print(get_data_range(positions_z))
+#            print(get_data_range(positions_rxy))
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(1,2)
+            
+            plt.rcParams['font.family'] = 'serif'
+            plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+            plt.rcParams['mathtext.default'] = 'regular'
+            # https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
+    
+            ## plot RXY
+            y,x,_=ax[0].hist(positions_rxy,bins=int(range_rxy*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+            ymax=np.amax(y)
+            from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+            ax[0].set_xlabel(r'Distance from center ($\AA$)',fontsize=15)
+            ax[0].set_ylabel(r'Element counts',fontsize=15)
+    #        ax.set_xlim([0.0,angstrom_cutoff+0.1])
+            ax[0].set_ylim([0,ymax+1])
+            ### SETTING TICKS IN Y AXIS
+            majoryLocator   = MultipleLocator(2)
+            majoryFormatter = FormatStrFormatter('%d')
+            minoryLocator   = MultipleLocator(1)
+            ax[0].yaxis.set_major_locator(majoryLocator)
+            ax[0].yaxis.set_major_formatter(majoryFormatter)
+            ax[0].yaxis.set_minor_locator(minoryLocator)
+            majorxLocator   = MultipleLocator(0.5)
+            minorxLocator   = MultipleLocator(0.25)
+            majorxFormatter = FormatStrFormatter('%.1f')
+            ax[0].xaxis.set_major_locator(majorxLocator)
+            ax[0].xaxis.set_major_formatter(majorxFormatter)
+            ax[0].xaxis.set_minor_locator(minorxLocator)
+            ax[0].text(0.2,0.85,"XY-plane\n"+label,transform=ax[0].transAxes, horizontalalignment='center', 
+            verticalalignment='center', size=15)
+    
+            ## plot Z
+            y,x,_=ax[1].hist(positions_z,bins=int(range_z*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+            ymax=np.amax(y)
+            from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+            ax[1].set_xlabel(r'Distance from center ($\AA$)',fontsize=15)
+            ax[1].set_ylabel(r'Element counts',fontsize=15)
+    #        ax.set_xlim([0.0,angstrom_cutoff+0.1])
+            ax[1].set_ylim([0,ymax+1])
+            ### SETTING TICKS IN Y AXIS
+            majoryLocator   = MultipleLocator(2)
+            majoryFormatter = FormatStrFormatter('%d')
+            minoryLocator   = MultipleLocator(1)
+            ax[1].yaxis.set_major_locator(majoryLocator)
+            ax[1].yaxis.set_major_formatter(majoryFormatter)
+            ax[1].yaxis.set_minor_locator(minoryLocator)
+            majorxLocator   = MultipleLocator(0.5)
+            minorxLocator   = MultipleLocator(0.25)
+            majorxFormatter = FormatStrFormatter('%.1f')
+            ax[1].xaxis.set_major_locator(majorxLocator)
+            ax[1].xaxis.set_major_formatter(majorxFormatter)
+            ax[1].xaxis.set_minor_locator(minorxLocator)
+    
+    
+            ax[1].text(0.2,0.85,"Z-direction\n"+label,transform=ax[1].transAxes, horizontalalignment='center', 
+            verticalalignment='center', size=15)
+    
+            plt.legend(fontsize=15)
+            import matplotlib
+            matplotlib.use("Qt5Agg") ## otherwise doesnt plot after importing minflow.
+            figure_height_inches=kwargs.get('height_inches',5)
+            figure_width_inches=kwargs.get('width_inches',15)
+            fig.set_figheight(figure_height_inches)
+            fig.set_figwidth(figure_width_inches)
+    
+            fig.savefig(prefix+'-cluster_geometry'+identifier+'.png')
+            fig.savefig(prefix+'-cluster_geometry'+identifier+'.svg')
+    
+            if showplot:
+                plt.show() #.savefig('anything.png')
+        
+    if mode == "comparative":
+        prefix=get_name_from_structure(structure[0])
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(2,2)
+        max_rxy=0
+        min_rxy=0
+        max_z=0
+        min_z=0
+        ymax=np.ones((2,2))
+        for idx in range(len(structure)):
+            positions=structure[idx].get_positions()
+            symbols=structure[idx].get_chemical_symbols()
+         
+            from collections import OrderedDict  ## OrderedDict is predictable set is not.
+            different_symbols=list(OrderedDict.fromkeys(symbols))
+            colors=[get_atom_color(element) for element in different_symbols]
+            if measurement=='rxy_z':
+                positions_rxy=positions[:,:2] ## get x,y coords
+                positions_rxy=positions_rxy-np.array(center[idx])[:2]
+                positions_rxy=np.array([np.linalg.norm(r) for r in positions_rxy])
+                symbol_positions_rxy=np.column_stack((symbols,positions_rxy))
+                
+                positions_rxy_by_symbol=[]
+                for element in different_symbols:
+                    matches=np.where(symbol_positions_rxy[:,0]==element)
+                    positions_rxy_by_symbol.append(symbol_positions_rxy[matches[0]])
+                positions_rxy=np.array([ pos[:,1].astype(np.float) for pos in positions_rxy_by_symbol],dtype=object)
+                range_rxy=max([max(a) for a in positions_rxy])-min([min(a) for a in positions_rxy])
+                max_rxy=max([max(a) for a in positions_rxy]+[max_rxy])
+                min_rxy=min([min(a) for a in positions_rxy]+[min_rxy])
+                
+                positions_z=positions[:,2] ## get z coords
+                positions_z=positions_z-np.array(center[idx])[2]
+                symbol_positions_z=np.column_stack((symbols,positions_z))
+                
+                positions_z_by_symbol=[]
+                for element in different_symbols:
+                    matches=np.where(symbol_positions_z[:,0]==element)
+                    positions_z_by_symbol.append(symbol_positions_z[matches[0]])
+                positions_z=np.array([ pos[:,1].astype(np.float) for pos in positions_z_by_symbol],dtype=object)
+                range_z=max([max(a) for a in positions_z])-min([min(a) for a in positions_z])
+                max_z=max([max(a) for a in positions_z]+[max_z])
+                min_z=min([min(a) for a in positions_z]+[min_z])
+    #            print(get_data_range(positions_z))
+    #            print(get_data_range(positions_rxy))
+                import matplotlib.pyplot as plt
+                
+                plt.rcParams['font.family'] = 'serif'
+                plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+                plt.rcParams['mathtext.default'] = 'regular'
+                # https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
+        
+                ## plot RXY
+                if idx == 0:
+                    y,x,_=ax[idx][0].hist(positions_rxy,bins=int(range_rxy*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+                    ymax[idx][0]=np.amax(y)
+                elif idx == 1:
+                    y,x,_=ax[idx][0].hist(positions_rxy,bins=int(range_rxy*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols ,alpha=0.5,linestyle="--",edgecolor="black") 
+                    ymax[idx][0]=np.amax(y)
+                ## plot Z
+                if idx == 0:
+                    y,x,_=ax[idx][1].hist(positions_z,bins=int(range_z*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+                    ymax[idx][1]=np.amax(y)
+                elif idx == 1:
+                    y,x,_=ax[idx][1].hist(positions_z,bins=int(range_z*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols ,alpha=0.5,linestyle="--",edgecolor="black")
+                    ymax[idx][1]=np.amax(y)
+
+
+        for idx in range(len(structure)):
+            if measurement=='rxy_z':
+                from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+                if idx == 1:
+                    ax[idx][0].set_xlabel(r'Distance from center ($\AA$)',fontsize=15)
+                ax[idx][0].set_ylabel(r'Element counts',fontsize=15)
+                ax[idx][0].set_xlim([min_rxy,max_rxy+0.1])
+                ax[idx][0].set_ylim([0,max(ymax[0][0],ymax[1][0])+1])
+                ### SETTING TICKS IN Y AXIS
+                majoryLocator   = MultipleLocator(2)
+                majoryFormatter = FormatStrFormatter('%d')
+                minoryLocator   = MultipleLocator(1)
+                ax[idx][0].yaxis.set_major_locator(majoryLocator)
+                ax[idx][0].yaxis.set_major_formatter(majoryFormatter)
+                ax[idx][0].yaxis.set_minor_locator(minoryLocator)
+                majorxLocator   = MultipleLocator(0.5)
+                minorxLocator   = MultipleLocator(0.25)
+                majorxFormatter = FormatStrFormatter('%.1f')
+                ax[idx][0].xaxis.set_major_locator(majorxLocator)
+                ax[idx][0].xaxis.set_major_formatter(majorxFormatter)
+                ax[idx][0].xaxis.set_minor_locator(minorxLocator)
+                ax[idx][0].text(0.2,0.85,"XY-plane\n"+label[idx],transform=ax[idx][0].transAxes, horizontalalignment='center', 
+                verticalalignment='center', size=15)
+        
+                from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+                if idx == 1:
+                    ax[idx][1].set_xlabel(r'Distance from center ($\AA$)',fontsize=15)
+                ax[idx][1].set_ylabel(r'Element counts',fontsize=15)
+                ax[idx][1].set_xlim([min_z-0.1,max_z+0.1])
+                ax[idx][1].set_ylim([0,max(ymax[0][1],ymax[1][1])+1])
+                ### SETTING TICKS IN Y AXIS
+                majoryLocator   = MultipleLocator(2)
+                majoryFormatter = FormatStrFormatter('%d')
+                minoryLocator   = MultipleLocator(1)
+                ax[idx][1].yaxis.set_major_locator(majoryLocator)
+                ax[idx][1].yaxis.set_major_formatter(majoryFormatter)
+                ax[idx][1].yaxis.set_minor_locator(minoryLocator)
+                majorxLocator   = MultipleLocator(0.5)
+                minorxLocator   = MultipleLocator(0.25)
+                majorxFormatter = FormatStrFormatter('%.1f')
+                ax[idx][1].xaxis.set_major_locator(majorxLocator)
+                ax[idx][1].xaxis.set_major_formatter(majorxFormatter)
+                ax[idx][1].xaxis.set_minor_locator(minorxLocator)
+        
+                ax[idx][1].legend(fontsize=15,loc="upper left", bbox_to_anchor= (1.01, 1), 
+                                   borderaxespad=0, frameon=False)
+        
+                ax[idx][1].text(0.2,0.85,"Z-direction\n"+label[idx],transform=ax[idx][1].transAxes, horizontalalignment='center', 
+                verticalalignment='center', size=15)
+        
+        import matplotlib
+        matplotlib.use("Qt5Agg") ## otherwise doesnt plot after importing minflow.
+        figure_height_inches=kwargs.get('height_inches',5)
+        figure_width_inches=kwargs.get('width_inches',15)
+        fig.set_figheight(figure_height_inches)
+        fig.set_figwidth(figure_width_inches)
+        
+        fig.savefig(prefix+'-cluster_geometry'+identifier+'_comp.png')
+        fig.savefig(prefix+'-cluster_geometry'+identifier+'_comp.svg')
+   
+        if showplot:
+            plt.show()
+
+
+def plot_surface_geometry(structure,surface_direction='z',identifier="",showplot=False,
+                          angstrom_cutoff=7,label=""):
+    if isinstance(structure,list):
+        mode="comparative"
+    else:
+        mode="default"
 
     if surface_direction == 'x':
         direction_idx=0
@@ -175,59 +427,201 @@ def plot_surface_geometry(structure,surface_direction='z'):
     elif surface_direction == 'z':
         direction_idx=2
 
-    surfacemax=max(positions[:,direction_idx])
-    symbol_positions=np.column_stack((symbols,positions))
+    if mode == "default":
+        prefix=get_name_from_structure(structure)
+        positions=structure.get_positions()
+        symbols=structure.get_chemical_symbols()
+        
+        if surface_direction == 'x':
+            direction_idx=0
+        elif surface_direction == 'y':
+            direction_idx=1
+        elif surface_direction == 'z':
+            direction_idx=2
+        
+        surfacemax=max(positions[:,direction_idx])
+        symbol_positions=np.column_stack((symbols,positions))
+            
+        from collections import OrderedDict  ## OrderedDict is predictable set is not.
+        different_symbols=list(OrderedDict.fromkeys(symbols))
+        colors=[get_atom_color(element) for element in different_symbols]
+        positions_by_symbol=[]
+        for element in different_symbols:
+            matches=np.where(symbol_positions[:,0]==element)
+            positions_by_symbol.append(symbol_positions[matches[0]])
+            
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1,1)
+        surface_zcoords_all=[]
+        for i,positions in enumerate(positions_by_symbol):
+        ## trim coordinates to last 5 angstrom
+            surface_zcoords=positions[:,direction_idx+1].astype(np.float)
+            surface_zcoords=surface_zcoords-surfacemax
+            surface_zcoords=surface_zcoords[surface_zcoords>-angstrom_cutoff]
+            surface_zcoords_all.append(-1*surface_zcoords)
+            # https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
+        y,x,_=ax.hist(surface_zcoords_all,bins=int(angstrom_cutoff*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+        ymax=np.amax(y)
+        from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+        ax.set_xlabel(r'Distance from surface ($\AA$)')
+        ax.set_ylabel(r'Element counts')
+        ax.set_xlim([0.0,angstrom_cutoff+0.1])
+        ax.set_ylim([0,ymax+1])
+        ### SETTING TICKS IN Y AXIS
+        majoryLocator   = MultipleLocator(1)
+        majoryFormatter = FormatStrFormatter('%d')
+        #minoryLocator   = MultipleLocator(0.5)
+        ax.yaxis.set_major_locator(majoryLocator)
+        ax.yaxis.set_major_formatter(majoryFormatter)
+        #ax[m].yaxis.set_minor_locator(minoryLocator)
+        majorxLocator   = MultipleLocator(0.5)
+        minorxLocator   = MultipleLocator(0.25)
+        majorxFormatter = FormatStrFormatter('%.1f')
+        ax.xaxis.set_major_locator(majorxLocator)
+        ax.xaxis.set_major_formatter(majorxFormatter)
+        ax.xaxis.set_minor_locator(minorxLocator)
 
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+        plt.rcParams['mathtext.default'] = 'regular'
+        ax.text(0.1,0.9,label,transform=ax.transAxes, horizontalalignment='center', 
+        verticalalignment='center', size=12)
 
-    from collections import OrderedDict  ## OrderedDict is predictable set is not.
-    different_symbols=list(OrderedDict.fromkeys(symbols))
-    colors=[get_atom_color(element) for element in different_symbols]
+        plt.legend()
+        import matplotlib
+        matplotlib.use("Qt5Agg") ## otherwise doesnt plot after importing minflow.
+        fig.savefig(prefix+'-surf_geometry'+identifier+'.png')
+        fig.savefig(prefix+'-surf_geometry'+identifier+'.svg')
+        if showplot:
+            plt.show() #.savefig('anything.png')
+        
+    if mode == "comparative":
+        print("comparative")
+        ymax=0
+        prefix=get_name_from_structure(structure[0])
+        import matplotlib.pyplot as plt
+        """
+        fig, ax = plt.subplots(1,1)
+        for idx in reversed(range(len(structure))):
+            positions=structure[idx].get_positions()
+            symbols=structure[idx].get_chemical_symbols()
+         
+            surfacemax=max(positions[:,direction_idx])
+            symbol_positions=np.column_stack((symbols,positions))
+        	
+            from collections import OrderedDict  ## OrderedDict is predictable set is not.
+            different_symbols=list(OrderedDict.fromkeys(symbols))
+            colors=[get_atom_color(element) for element in different_symbols]
+        
+            positions_by_symbol=[]
+            for element in different_symbols:
+                matches=np.where(symbol_positions[:,0]==element)
+                positions_by_symbol.append(symbol_positions[matches[0]])
+        
+            surface_zcoords_all=[]
+            for i,positions in enumerate(positions_by_symbol):
+            ## trim coordinates to last 5 angstrom
+                surface_zcoords=positions[:,direction_idx+1].astype(np.float)
+                surface_zcoords=surface_zcoords-surfacemax
+                surface_zcoords=surface_zcoords[surface_zcoords>-angstrom_cutoff]
+            #    print(surface_zcoords)
+                surface_zcoords_all.append(-1*surface_zcoords)
+            #    print(surface_zcoords_all)
+        # https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
+            if idx == 0:
+                ax.hist(surface_zcoords_all,bins=int(angstrom_cutoff*10),color=colors,histtype='bar', density=False,
+                    stacked=True,label=different_symbols)
+            elif idx==1: ## ref colored more lightly
+#                colors=[np.array(color)+(np.array([256,256,256])-np.array(color)*255)/(4*255) for color in colors]
+                ax.hist(surface_zcoords_all,bins=50,color=colors,histtype='bar', density=False,
+                    stacked=True, label=different_symbols,alpha=0.5,linestyle="--",edgecolor="black")
+"""
+        fig, (ax1,ax2) = plt.subplots(2,1)
+        for idx in reversed(range(len(structure))):
+            positions=structure[idx].get_positions()
+            symbols=structure[idx].get_chemical_symbols()
+         
+            surfacemax=max(positions[:,direction_idx])
+            symbol_positions=np.column_stack((symbols,positions))
+        	
+            from collections import OrderedDict  ## OrderedDict is predictable set is not.
+            different_symbols=list(OrderedDict.fromkeys(symbols))
+            colors=[get_atom_color(element) for element in different_symbols]
+        
+            positions_by_symbol=[]
+            for element in different_symbols:
+                matches=np.where(symbol_positions[:,0]==element)
+                positions_by_symbol.append(symbol_positions[matches[0]])
+        
+            surface_zcoords_all=[]
+            for i,positions in enumerate(positions_by_symbol):
+            ## trim coordinates to last 5 angstrom
+                surface_zcoords=positions[:,direction_idx+1].astype(np.float)
+                surface_zcoords=surface_zcoords-surfacemax
+                surface_zcoords=surface_zcoords[surface_zcoords>-angstrom_cutoff]
+            #    print(surface_zcoords)
+                surface_zcoords_all.append(-1*surface_zcoords)
+            #    print(surface_zcoords_all)
+        # https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
+            if idx==0:
+                y,x,_ = ax1.hist(surface_zcoords_all,bins=int(angstrom_cutoff*10),color=colors,histtype='bar', density=False, stacked=True,label=different_symbols)
+                ymax=max(ymax,np.amax(y))
+            elif idx==1: ## ref colored more lightly
+#                colors=[np.array(color)+(np.array([256,256,256])-np.array(color)*255)/(4*255) for color in colors]
+                y,x,_ = ax2.hist(surface_zcoords_all,bins=int(angstrom_cutoff*10),color=colors,histtype='bar', density=False, stacked=True, label=different_symbols,alpha=0.5,linestyle="--",edgecolor="black")
+                ymax=max(ymax,np.amax(y))
+#        surface_zcoords_all=[]
+#        for i,positions in enumerate(positions_by_symbol):
+        ## trim coordinates to last 5 angstrom
+#            surface_zcoords=positions[:,direction_idx+1].astype(np.float)
+#            surface_zcoords=surface_zcoords-surfacemax
+#            surface_zcoords=surface_zcoords[surface_zcoords>-angstrom_cutoff]
+#            surface_zcoords_all.append(-1*surface_zcoords)
+            # https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
+#            ax.hist(surface_zcoords_all,bins=int(angstrom_cutoff*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+        from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+        plt.xlabel(r'Distance from surface ($\AA$)')
+        ax1.set_ylabel(r'Element counts')
+        ax2.set_ylabel(r'Element counts')
+        ax1.set_xlim([0.0,angstrom_cutoff+0.1])
+        ax2.set_xlim([0.0,angstrom_cutoff+0.1])
+        ax1.set_ylim([0,ymax+1])
+        ax2.set_ylim([0,ymax+1])
+        ### SETTING TICKS IN Y AXIS
+        majoryLocator   = MultipleLocator(1)
+        majoryFormatter = FormatStrFormatter('%d')
+        #minoryLocator   = MultipleLocator(0.5)
+        ax1.yaxis.set_major_locator(majoryLocator)
+        ax1.yaxis.set_major_formatter(majoryFormatter)
+        ax2.yaxis.set_major_locator(majoryLocator)
+        ax2.yaxis.set_major_formatter(majoryFormatter)
+        #ax[m].yaxis.set_minor_locator(minoryLocator)
+        majorxLocator   = MultipleLocator(0.5)
+        minorxLocator   = MultipleLocator(0.25)
+        majorxFormatter = FormatStrFormatter('%.1f')
+        ax1.xaxis.set_major_locator(majorxLocator)
+        ax1.xaxis.set_major_formatter(majorxFormatter)
+        ax1.xaxis.set_minor_locator(minorxLocator)
+        ax2.xaxis.set_major_locator(majorxLocator)
+        ax2.xaxis.set_major_formatter(majorxFormatter)
+        ax2.xaxis.set_minor_locator(minorxLocator)
+        ax1.legend()
+        ax2.legend()
 
-    positions_by_symbol=[]
-    for element in different_symbols:
-        matches=np.where(symbol_positions[:,0]==element)
-        positions_by_symbol.append(symbol_positions[matches[0]])
+        plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+        plt.rcParams['mathtext.default'] = 'regular'
+        ax1.text(0.1,0.9,label[0],transform=ax1.transAxes, horizontalalignment='center', 
+        verticalalignment='center', size=12)
+        ax2.text(0.1,0.9,label[1],transform=ax2.transAxes, horizontalalignment='center', 
+        verticalalignment='center', size=12)
 
-
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1,1)
-    surface_zcoords_all=[]
-    for i,positions in enumerate(positions_by_symbol):
-    ## trim coordinates to last 5 angstrom
-        surface_zcoords=positions[:,direction_idx+1].astype(np.float)
-        surface_zcoords=surface_zcoords-surfacemax
-        surface_zcoords=surface_zcoords[surface_zcoords>-5]
-    #    print(surface_zcoords)
-        surface_zcoords_all.append(-1*surface_zcoords)
-    #    print(surface_zcoords_all)
-# https://www.weirdgeek.com/2018/11/plotting-stacked-histogram
-    ax.hist(surface_zcoords_all,bins=50,color=colors,histtype='bar', density=False,
-            stacked=True,label=different_symbols)
-
-    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
-    ax.set_xlabel(r'Distance from surface ($\AA$)')
-    ax.set_ylabel(r'Element counts')
-    ax.set_xlim([0.0,5.1])
-    ### SETTING TICKS IN Y AXIS
-    majoryLocator   = MultipleLocator(1)
-    majoryFormatter = FormatStrFormatter('%d')
-    #minoryLocator   = MultipleLocator(0.5)
-    ax.yaxis.set_major_locator(majoryLocator)
-    ax.yaxis.set_major_formatter(majoryFormatter)
-    #ax[m].yaxis.set_minor_locator(minoryLocator)
-    majorxLocator   = MultipleLocator(0.5)
-    minorxLocator   = MultipleLocator(0.25)
-    majorxFormatter = FormatStrFormatter('%.2f')
-    ax.xaxis.set_major_locator(majorxLocator)
-    ax.xaxis.set_major_formatter(majorxFormatter)
-    ax.xaxis.set_minor_locator(minorxLocator)
-
-    plt.legend()
-    import matplotlib
-    matplotlib.use("Qt5Agg") ## otherwise doesnt plot after importing minflow.
-    fig.savefig(prefix+'-surf_geometry.png')
-    fig.savefig(prefix+'-surf_geometry.svg')
-    plt.show() #.savefig('anything.png')
+        import matplotlib
+        matplotlib.use("Qt5Agg") ## otherwise doesnt plot after importing minflow.
+        fig.savefig(prefix+'-surf_geometry'+identifier+'.png')
+        fig.savefig(prefix+'-surf_geometry'+identifier+'.svg')
+        if showplot:
+            plt.show() #.savefig('anything.png')
 
 def get_geometry_data(structure):
     import itertools
