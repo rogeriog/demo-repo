@@ -129,13 +129,15 @@ def get_pathPBZ(structure):
     labels=structure.cell.bandpath().path.replace(",","")
     return (labels,path)
 
-def generate_xsf_file(input_file):
+def generate_xsf_file(input_file,**kwargs):
     import ase.io.xsf 
     structure=read_structure(input_file)
-    if input_file.split(".")[0] == "out":
-        xsffile=input_file.split(".")[1]+".out.xsf"
-    else:
-        xsffile=input_file.split(".")[0]+".xsf"
+    xsffile=kwargs.get("filename",None)
+    if xsffile is None:
+        if input_file.split(".")[0] == "out":
+            xsffile=input_file.split(".")[1]+".out.xsf"
+        else:
+            xsffile=input_file.split(".")[0]+".xsf"
     with open(xsffile, "w") as f:
         ase.io.xsf.write_xsf(f,[structure])
     print("XSF file generated.")
