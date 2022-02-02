@@ -59,6 +59,28 @@ def read_structure(filename):
         return structure
 
 
+def substitute_atom(structure, atom,new_atom):
+    """ Given an ASE structure, substitute atom by new_atom, atom and new_atom are 
+      both atomic symbols, strings. """
+    for i in range(len(structure)):
+        if structure[i].symbol == atom:
+            structure[i].symbol=new_atom
+    return structure
+
+def get_total_energy(filename):
+    """Search for the energy in file, if there are multiple gets last one"""
+    string_to_search="!" ## identifier of energy
+    total_energy = 0
+    # Open the file in read only mode
+    with open(filename, 'r') as read_obj:
+        # Read all lines in the file one by one
+        lines=read_obj.readlines()
+        for line in lines:
+            if string_to_search in line:
+                #list_of_results.append(line.rstrip())  ## if youd like all results
+                total_energy=line.rstrip().split()[4]
+    return float(total_energy)
+
 import MinFlow.cluster_sets as cluster_sets
 def getPseudoDict(structure,cluster="local",user="user",enforce_PPsufix=None):
     """
@@ -413,6 +435,8 @@ def plot_cluster_geometry(structure,center,measurement='rxy_z',identifier="",sho
    
         if showplot:
             plt.show()
+
+
 
 
 def plot_surface_geometry(structure,surface_direction='z',identifier="",showplot=False,
