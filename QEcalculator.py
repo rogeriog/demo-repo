@@ -25,7 +25,7 @@ class QEcalc:
     kspacing: finds kspacing according to https://github.com/rosswhitfield/ase/blob/a652830b9821bfde233463616a4249758b7ffb00/ase/io/espresso.py#L1599
     ktuple: follows quantum espresso automatic like (6,6,6,0,0,0) for 6x6x6 mokhorstpack centered in gamma.
     """
-    def __init__(self,prefix=None,calculation=None,ecutwfc=60,pseudodict=None,structure=None,scale_cutrho=4, kpath=None, kspacing=None,ktuple=(1,1,1,0,0,0),**kwargs):
+    def __init__(self,prefix=None,calculation=None,ecutwfc=60,pseudodict=None,structure=None,scale_cutrho=4, kpath=None, kspacing=None,ktuple=(1,1,1,0,0,0),nbnd="",**kwargs):
         if ( prefix is None ) or (calculation is None) or ( pseudodict is None) or (structure is None):
             raise Exception("You must provide prefix, calculation, pseudodict and structure to declare the calculator!!")
         self.prefix=prefix
@@ -73,11 +73,15 @@ class QEcalc:
         self.input_data['ecutwfc']=ecutwfc
         self.input_data['ecutrho']=ecutwfc*scale_cutrho
 
+        if nbnd is None:
+            self.nbnd=nbnd
+        else:
+            self.input_data['SYSTEM']['nbnd']=int(nbnd)
+        
         ## these are filled when methods are applied
         self.input_file=""
         self.output_file=""
         self.relaxed_structure=""
-        self.nbnd=""
         self.nelectron=""
         self.band_from_str=False
         self.magmoms=""

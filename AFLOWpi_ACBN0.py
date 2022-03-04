@@ -589,18 +589,20 @@ def runAFLOW_ACBN0(prefix="",local=False,mode="default"):
         Uvals = ast.literal_eval(lastU_data)
         return Uvals
 
-    with open("ID","r") as f:
-        prefix_aflowpi=f.readline().split("_")[0]
     if mode == "read_Uvals":
         try:
             Uvals=readUvals()
         except:
+            with open("ID","r") as f:
+                prefix_aflowpi=f.readline().split("_")[0]
             AFLOWdir="ACBN0/{prefix}/ACBN0_{prefix}_0001/".format(prefix=prefix)
             Uvals_log=prefix_aflowpi+"_03_uValLog.log"
             shutil.copyfile(AFLOWdir+Uvals_log, "Uvals.log")
             Uvals=readUvals
         return Uvals
 
+    with open("ID","r") as f:
+        prefix_aflowpi=f.readline().split("_")[0]
     AFLOWdir="ACBN0/{prefix}/ACBN0_{prefix}_0001/".format(prefix=prefix)
     os.chdir(AFLOWdir)
     ACBN0pyfiles=["_"+prefix_aflowpi+"_01.py","_"+prefix_aflowpi+"_02.py","_"+prefix_aflowpi+"_03.py"]

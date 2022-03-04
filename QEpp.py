@@ -290,6 +290,8 @@ def PP_processing(prefix,mode="charge_geometry+gap+pdos",**kwargs):
                 get_geometry_data(kwargs['structure'])
             except Exception as e:
                 print(e)
+        directory_path = os.getcwd()
+        print("My current directory is : " + directory_path)
         try:
             os.chdir("PP")
         except FileNotFoundError as error:
@@ -329,10 +331,12 @@ def PP_processing(prefix,mode="charge_geometry+gap+pdos",**kwargs):
             os.chdir("PP")
         except FileNotFoundError as error:
             print(error)
-        plot_bands(prefix,indexes=kwargs.get('indexes'),fermi=kwargs.get('fermi',0.0),label=kwargs.get('label',''),
-        color=kwargs.get('color','black'),RANGE_VB=kwargs.get('RANGE_VB',1.5),RANGE_CB=kwargs.get('RANGE_CB',5),
-        redstates=kwargs.get('redstates',[]),greenstates=kwargs.get('greenstates',[]),bluestates=kwargs.get('bluestates',[]), labelsprojs=kwargs.get('labelsprojs',["","",""]),maxcontrast=kwargs.get("maxcontrast",True), 
-        contrast_ratios=kwargs.get("contrast_ratios",[1,1,1]))
+        plot_bands(prefix,**kwargs)
+        
+#        indexes=kwargs.get('indexes'),fermi=kwargs.get('fermi',0.0),label=kwargs.get('label',''),
+#        color=kwargs.get('color','black'),RANGE_VB=kwargs.get('RANGE_VB',1.5),RANGE_CB=kwargs.get('RANGE_CB',5),
+#        redstates=kwargs.get('redstates',[]),greenstates=kwargs.get('greenstates',[]),bluestates=kwargs.get('bluestates',[]), labelsprojs=kwargs.get('labelsprojs',["","",""]),maxcontrast=kwargs.get("maxcontrast",True), 
+#        contrast_ratios=kwargs.get("contrast_ratios",[1,1,1]), )
         #except Exception as error:
         #    print(error)
         os.chdir("../")
@@ -1889,8 +1893,13 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
 ## notice if there is overlapping colors will blend
              maxcontrast=True,  ## notice if maxcontrast=0, color will be as strong as the state proportion, 
              #usually this contribution is very low compared to total, therefore maxcontrast is default.
-             contrast_ratios=[1,1,1]  ## only if maxcontrast true # values should be in 0-1 range ## can use to
+             contrast_ratios=[1,1,1],  ## only if maxcontrast true # values should be in 0-1 range ## can use to
              ## obtain custom colors
+             plot_emass_fitting=False,
+             emass_calculation=False,
+             print_svg=False,
+             kpoint_section_thresold=0.2,  ### this MAY REQUIRE FINE TUNING, check the number of sections on output to see it it is correct.
+             **kwargs
       ):
 ###################### SETTING VARIABLES ######################################
 ## files needed  ## give in list format
@@ -1908,7 +1917,7 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
     #   Γ—Y—F0|Δ0—Γ—Z—B0|G0—T—Y|Γ—S—R—Z—T  ## band path hexagonal CsSbI 63/mmc
     #   Γ—X—S—Y—Γ—Z—U—R—T—Z|X—U|Y—T|S—R   ## band path ortorhombic CsSbCl 
     
-    kpoint_section_thresold=0.2   ### this MAY REQUIRE FINE TUNING, check the number of sections on output to see it it is correct.
+    #kpoint_section_thresold=0.1  ### this MAY REQUIRE FINE TUNING, check the number of sections on output to see it it is correct.
     ### less section than expected, reduce this value, more sections than expected, increase this value. 
     legendposition_tuple_lines=(1,1)
     legendposition_tuple_patches=(1,1)
@@ -1945,10 +1954,14 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
     indexes_pos=[]  ## ought to have same size of indexes list
     
     ########### EFFECTIVE MASS SETUP ###f############################
-    emass_calculation=False ## will print effective mass on high symmetry points, use manual indexing for arbitrary points
-    plot_emass_fitting=False ## will show the fitted curve to obtain effective masses
-    alat=16.365  ## alat used by quantum espresso have to know to change coords of k points to calculate eff mass
-    k_width=0.15 ## range above and below hspoint in default k-coordinates to consider in band 0.15 usually enough, 
+    #emass_calculation=False ## will print effective mass on high symmetry points, use manual indexing for arbitrary points
+    #plot_emass_fitting=False ## will show the fitted curve to obtain effective masses
+    
+    if plot_emass_fitting :
+        print(f"K point coordinate values must be scalated according to QE alat. Beware when calculating effective mass!!")
+
+    #alat=16.365  ## alat used by quantum espresso have to know to change coords of k points to calculate eff mass
+    #k_width=0.15 ## range above and below hspoint in default k-coordinates to consider in band 0.15 usually enough, 
     # can always check turning plot_emass_fitting to True.
     ylevel_refpoint=0.5  ## ref point to calculate effective mass remember fermi level y=0. Important this level between gap!
     ## shift ylevel_refpoint to a value between valence and conduction band to calculate bands.
@@ -2230,6 +2243,7 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
         ##find sections of kpointspath where there is band discontinuity, a 0.2 value of change is taken as enough
         ## for a discontinuity to be defined, usually the difference in kpoints should be less than 0.1 in a good
         ## band structure.
+        print('kst',kpoint_section_thresold)
         bandsections=np.where(np.diff(fullkpointspath)>kpoint_section_thresold)[0]+1 ## add 1 because ndiff takes the previous value
         print(" A total of %2d sections were found. Is that what you expected? " % (len(bandsections)+1) )
         ### bandsections holds indexes of the discontinuity the fullkpointspath 
@@ -2718,7 +2732,53 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
                         print('cbandmass '+pairs[idx_pair][0]+'-'+pairs[idx_pair+1][0],get_emass(righthand_cband,alat,hspoint[1]))
                         print('vbandmass '+pairs[idx_pair][0]+'-'+pairs[idx_pair+1][0],get_emass(righthand_vband,alat,hspoint[1]))
     
-    
+#    if len(bluestates) != 0 and len(redstates) != 0 :
+#        def print_colormap():
+#            import matplotlib as mpl
+#            import numpy as np
+#            import matplotlib.pyplot as plt
+#            from matplotlib.colors import LinearSegmentedColormap
+#
+#            #thresh = 0.2
+#            nodes = [0,1.0]
+#            colors = ["red", "blue"]
+#            cmap = LinearSegmentedColormap.from_list("", list(zip(nodes, colors)))
+#            cmap.set_under("white")
+#            fig_cb, ax_cb = plt.subplots()
+#
+#            data = np.zeros((10,10))-1
+#            print(data)
+#
+#            im = ax_cb.imshow(data, cmap=cmap, vmin=0, vmax=1)
+#            cbar = fig_cb.colorbar(im, ticks=[0, 1],shrink=0.25,aspect=5)
+#            cbar.ax_cb.set_yticklabels([labelsprojs[0],labelsprojs[2]])
+#            cbar.set_label('Element contribution', rotation=270,  labelpad = 10)
+#
+#            fig_cb.savefig('colormap.svg', format='svg', dpi=1000,bbox_inches='tight')
+#        print_colormap()
+#
+#        import matplotlib
+#        from matplotlib.colors import LinearSegmentedColormap
+#        #thresh = 0.2
+#        nodes = [0,1.0]
+#        colors = ["red", "blue"]
+#        cmap = LinearSegmentedColormap.from_list("", list(zip(nodes, colors)))
+#        cmap.set_under("white")
+#        #figc, axc = plt.subplots()
+#
+#        data = np.arange(1, 0, -0.01).reshape(10, 10)
+#
+#        fig, ax = plt.subplots()
+#        cax = fig.add_axes([0.27, 0.8, 0.5, 0.05])
+#
+#        im = ax.imshow(data, cmap=cmap)
+#
+#        cbar=fig.colorbar(im, cax=cax, ticks=[0, 1],shrink=0.25,aspect=5)
+#        #matplotlib.colorbar.ColorbarBase(fig, cmap=cmap)
+#
+#        cbar.ax.set_yticklabels([labelsprojs[0],labelsprojs[2]])
+#        cbar.set_label('Element contribution', rotation=270,  labelpad = 10)
+
     ## this will coalesce legends into the different color ones with their corresponding color.
     final_handles = [] 
     handlescolors=[]
@@ -2745,15 +2805,22 @@ def plot_bands(prefix,indexes,fermi=0.0,label="",color="black",RANGE_VB=1.5,RANG
     blue_patch = mpatches.Patch(color='blue', label=labelsprojs[2])
     if len(redstates) != 0 :
         patches.append(red_patch)
-    if len(greenstates) != 0 :
+        plt.legend(handles=patches,bbox_to_anchor=legendposition_tuple_patches, frameon=False, prop={"size":12},)
+    elif len(greenstates) != 0 :
         patches.append(green_patch)
-    if len(bluestates) != 0 :
+        plt.legend(handles=patches,bbox_to_anchor=legendposition_tuple_patches, frameon=False, prop={"size":12},)
+    elif len(bluestates) != 0 :
         patches.append(blue_patch)
+        plt.legend(handles=patches,bbox_to_anchor=legendposition_tuple_patches, frameon=False, prop={"size":12},)
+
+
+#plt.savefig("cm.png")
+   
     
-    
-    plt.legend(handles=patches,bbox_to_anchor=legendposition_tuple_patches, frameon=False, prop={"size":12},)
     
     #plt.show()
     fig.savefig(PREFIX[0]+'_bandproj'+'.png', format='png', dpi=1000,bbox_inches='tight')
+    if print_svg:
+        fig.savefig(PREFIX[0]+'_bandproj'+'.svg', format='svg', dpi=1000,bbox_inches='tight')
 
 

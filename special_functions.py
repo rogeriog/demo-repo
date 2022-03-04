@@ -67,6 +67,57 @@ def substitute_atom(structure, atom,new_atom):
             structure[i].symbol=new_atom
     return structure
 
+def get_data_from_outQE(outfile,data):
+    with open(outfile) as f:
+        pwo_lines=f.readlines()
+        initialize_magn_valence=True
+        readvalence=False
+        readmagn=False
+        got_ntyp=False
+        symbols=[]
+        magn=[]
+        i_magn=0
+        valence=[]
+        i_val=0
+        for line in pwo_lines:
+            if "number of Kohn-Sham states" in line:
+                nbnd=int(line.split()[4])
+            if "number of electrons" in line:
+                nelectron=int(float(line.split()[4]))
+            if "number of atomic types" in line and initialize_magn_valence:
+                ntyp=int(float(line.split()[5]))
+                got_ntyp=True
+                magn=np.zeros(ntyp)
+                valence=np.zeros(ntyp)
+                initialize_magn_valence=False ## otherwise may initialize again
+            if "atomic species   valence" in line:
+                readvalence=True
+                continue ## go to next line
+            if got_ntyp and i_val == ntyp:
+                readvalence=False ## stop reading new types
+            if readvalence:
+                valence[i_val]=float(line.split()[1])
+                symbols.append(line.split()[0])
+                i_val+=1
+            if "atomic species   magnetization" in line:
+                readmagn=True
+                continue ## go to next line
+            if got_ntyp and i_magn == ntyp:
+                readmagn=False ## stop reading
+            if readmagn:
+                magn[i_magn]=float(line.split()[1])
+                i_magn+=1
+        if not np.all(magn) : ## if all magn is 0 no magmom is updated. 
+            magmoms=np.round(valence*magn,2)
+        if data == "nelectron":
+            return nelectron
+        if data == "ntyp":
+            return ntyp
+        if data == "nbnd":
+            return nbnd
+        if data == "magn":
+            return magmoms
+
 def get_total_energy(filename):
     """Search for the energy in file, if there are multiple gets last one"""
     string_to_search="!" ## identifier of energy
@@ -648,6 +699,119 @@ def plot_surface_geometry(structure,surface_direction='z',identifier="",showplot
         fig.savefig(prefix+'-surf_geometry'+identifier+'.svg')
         if showplot:
             plt.show() #.savefig('anything.png')
+
+def plot_badercharges(structure,prefix_baderanalysis="",
+                      mode="default",direction='z',identifier="",showplot=False,
+                          label="",**kwargs):
+
+    import pandas as pd
+    df=pd.read_csv("BaderChgAnalysis_"+prefix_baderanalysis+".out",delimiter=r"\s+")
+    badercharges=df.iloc[:,4].to_numpy()
+
+    if direction == 'x':
+        direction_idx=0
+    elif direction == 'y':
+        direction_idx=1
+    elif direction == 'z':
+        direction_idx=2
+
+    prefix=get_name_from_structure(structure)
+    if kwargs.get('prefix',False):
+        prefix=kwargs['prefix']
+    positions=structure.get_positions()
+    symbols=structure.get_chemical_symbols()
+
+
+    surfacemax=max(positions[:,direction_idx])
+    symb_pos_bader=np.column_stack((symbols,positions,badercharges))
+    print(symb_pos_bader)
+
+    from collections import OrderedDict  ## OrderedDict is predictable set is not.
+    different_symbols=list(OrderedDict.fromkeys(symbols))
+    colors=[get_atom_color(element) for element in different_symbols]
+    data_by_symbol=[]
+    for element in different_symbols:
+        matches=np.where(symb_pos_bader[:,0]==element)
+        data_by_symbol.append(symb_pos_bader[matches[0]])
+#    print(data_by_symbol)
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1,1)
+    for i in range(len(data_by_symbol)):
+        pos=data_by_symbol[i][:,direction_idx+1].astype(float)
+        bader=data_by_symbol[i][:,4].astype(float)
+        p = pos.argsort()
+        pos=pos[p]
+        bader=bader[p]
+        ax.plot(pos,bader,color=colors[i],linestyle='-',label=different_symbols[i])
+        ax.plot(pos,bader,'o',color=colors[i])
+
+    if mode=="potential_interface":
+        print("A avg.dat file is necessary for potential.")
+        filename="avg.dat"
+        data=np.genfromtxt(filename)
+        distance=data[:,0]
+        potential=data[:,1]
+        mac_avg_qe=data[:,2]
+        ax.plot(data[:,0]*0.52918,data[:,1]*13.6056622,color="dimgray",alpha=0.5,label=r"$\overline{V}$") ## potential Angstrom X eV
+        ax.plot(distance*0.52918,mac_avg_qe*13.6056622,color="black",label=r"$\overline{\overline{V}}$")  ## macavg from QE ## should be identical to the calculated one
+
+        ax.axhline(y=max(mac_avg_qe*13.6056622),linestyle='--',color='dimgray',alpha=0.7)
+        ax.axhline(y=min(mac_avg_qe*13.6056622),linestyle='--',color='dimgray',alpha=0.7)
+
+
+    leg=ax.legend(bbox_to_anchor=(1,0.9),labelspacing=0.3,
+                loc='upper left', frameon=False, prop={"size":13})
+    # set the linewidth of each legend object
+    for legobj in leg.legendHandles:
+        legobj.set_linewidth(2.0)
+
+    if kwargs.get('reverse',False):
+        print('reversed x axis')
+        ax.invert_xaxis()
+    if kwargs.get('xlim',False):
+        ax.set_xlim(kwargs['xlim'])
+    if kwargs.get('ylim',False):
+        ax.set_ylim(kwargs['ylim'])
+#    ax.set_ylim([0,ymax+1])
+    #(surface_zcoords_all,bins=int(angstrom_cutoff*10),color=colors,histtype='bar', density=False,stacked=True,label=different_symbols)
+#    ymax=np.amax(y)
+#    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+    ax.set_xlabel(direction+r' ($\AA$)')
+    ax.set_ylabel(r'Atomic charge ($e$)')
+
+    ### SETTING TICKS IN Y AXIS
+    from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+    majoryLocator   = MultipleLocator(0.5)
+    majoryFormatter = FormatStrFormatter('%.1f')
+    minoryLocator   = MultipleLocator(0.1)
+    ax.yaxis.set_major_locator(majoryLocator)
+    ax.yaxis.set_major_formatter(majoryFormatter)
+    ax.yaxis.set_minor_locator(minoryLocator)
+
+    majorxLocator   = MultipleLocator(5)
+    minorxLocator   = MultipleLocator(1)
+    majorxFormatter = FormatStrFormatter('%.1f')
+    ax.xaxis.set_major_locator(majorxLocator)
+    ax.xaxis.set_major_formatter(majorxFormatter)
+    ax.xaxis.set_minor_locator(minorxLocator)
+
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+    plt.rcParams['mathtext.default'] = 'regular'
+#    ax.text(0.1,0.9,label,transform=ax.transAxes, horizontalalignment='center',
+#    verticalalignment='center', size=12)
+
+    import matplotlib
+    matplotlib.use("Qt5Agg") ## otherwise doesnt plot after importing minflow.
+    fig.savefig(prefix+'-bader_plot'+identifier+'.png',bbox_inches='tight', dpi=1000)
+    fig.savefig(prefix+'-bader_plot'+identifier+'.svg',bbox_inches='tight', dpi=1000)
+    if showplot:
+        plt.show() #.savefig('anything.png')
+
+
+
+
 
 def get_geometry_data(structure):
     import itertools
