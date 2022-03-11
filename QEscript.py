@@ -9,7 +9,7 @@ output file. If you specify as a list, structures will run in sequence.
 """
 #########################################################################################################
 
-structures_filepath=["structures/KBNO_cU.scf.in","structures/KBNOCo_cU.scf.in","structures/KBNOCoN_c2U.scf.in","structures/KBNON_cU.scf.in"]
+structures_filepath=["structures/structure1.scf.in","structures/structure2.cif"]
 
 #########################################################################################################
 #########################################################################################################
@@ -28,7 +28,7 @@ def process_structure(struct_filepath):
 
     ## extra modifications depending on what you need
     from MinFlow.special_functions import substitute_atom
-    structure=substitute_atom(structure,'Ba','Sr')
+#    structure=substitute_atom(structure,'Ba','Sr')
     return structure
 
 
@@ -53,7 +53,7 @@ folder for the calculation. Use sameFolderRun=True to not create a new folder.
 """
 #########################################################################################################
 
-prefixes=["KSNO","KSNOCo","KSNOCoN","KSNON"]
+prefixes=["str1","str2"]
 sameFolderRun=False
 
 
@@ -112,97 +112,29 @@ read_Uvals : if acbn0 calculation was performed and you want to read Uvals from 
 
 ## few steps of a relax calculation with coarse kgrid and lower cutoff
 calc_relax1={
-'cluster_tag':'cesup_fermiNC',
+'cluster_tag':'cesup_fermi',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
-#'PPsufix':'gbrv_us.upf',
+'PPsufix':'gbrv_us.upf',
 'calculation':'vc-relax',
 'kgrid':5,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 'kgrid_shift':(0,0,0),  ## kgrid shift 
-'ecutwfc':70,
-'scale_cutrho':4,
+'ecutwfc':50,
+'scale_cutrho':6,
 #'run_specs':'local', ## if you want to run locally
 ##'run_specs':'fermi_gpu_relax', ## specific for gpu relaxation
 
-'CUSTOM':{'CONTROL':{'nstep':5},
-          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
+'CUSTOM':{'CONTROL':{'nstep':10},
+          'SYSTEM':{'nspin':2,'input_dft':'pbe', 'degauss':0.002},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
 }
 
 ### a relax calculation with converged kgrid and cutoff
-#calc_relax2={
-#'cluster_tag':'cesup_fermi',
-#'user':'raglamai',
-#'nodes':1,
-#'ncpus':24,
-#'PPsufix':'gbrv_us.upf',
-#'calculation':'vc-relax',
-#'kgrid':5,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
-#'kgrid_shift':(0,0,0),  ## kgrid shift 
-#'ecutwfc':50,
-#'scale_cutrho':6,
-#'run_specs':'local', ## if you want to run locally
-###'run_specs':'fermi_gpu_relax', ## specific for gpu relaxation
-#
-#'CUSTOM':{'CONTROL':{'nstep':100},
-#          'SYSTEM':{'input_dft':'pbe'},
-#          'ELECTRONS':{'mixing_beta':0.3},
-#          'IONS':{},
-#          'CELL':{}}
-#}
-#
-
-## scf example calculation, previous relaxed structure will be read automatically if they
-## are both in the calc_sets variable at the end. If you want to restart from scf calculation
-## though, you should specify relaxed structure file (out.prefix.relax, for example), in structure_filepath.
-calc_scf_dry={
-'cluster_tag':'cesup_fermiNC',
-'user':'raglamai',
-'nodes':1,
-'ncpus':24,
-#'PPsufix':'gbrv_us.upf',
-'calculation':'scf',
-'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
-'kgrid_shift':(0,0,0),  ## kgrid shift 
-'ecutwfc':70,
-'scale_cutrho':4,
-'run_specs':'dryrun', ## if you want to run locally
-
-'CUSTOM':{'CONTROL':{'nstep':100},
-          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
-          'ELECTRONS':{'mixing_beta':0.3},
-          'IONS':{},
-          'CELL':{}}
-}
-## example for ACBN0 calculation 
-calc_set_acbn0={
-'cluster_tag':'cesup_fermiNC',
-'user':'raglamai',
-'nodes':1,
-'ncpus':24,
-'calculation':'acbn0',
-
-'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
-'kgrid_shift':(0,0,0),  ## kgrid shift 
-'ecutwfc':70,
-'scale_cutrho':4,
-#'run_specs':'local', ## if you want to run locally
-
-'CUSTOM':{'CONTROL':{'nstep':100},
-          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
-          'ELECTRONS':{'mixing_beta':0.3},
-          'IONS':{},
-          'CELL':{}}
-}
-
-calc_relax_U={
-#'prefix':'NBNOCo_cU',
-'read_Uvals':True,
-
-'cluster_tag':'cesup_fermi2',
+calc_relax2={
+'cluster_tag':'cesup_fermi',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
@@ -213,19 +145,21 @@ calc_relax_U={
 'ecutwfc':50,
 'scale_cutrho':6,
 #'run_specs':'local', ## if you want to run locally
-
-'CUSTOM':{'CONTROL':{'nstep':50},
-          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
+###'run_specs':'fermi_gpu_relax', ## specific for gpu relaxation
+#
+'CUSTOM':{'CONTROL':{'nstep':100},
+          'SYSTEM':{'nspin':2,'input_dft':'pbe', 'degauss':0.002},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
 }
+#
 
-calc_scf_U={
-#'prefix':'NBNOCo_cU',
-'read_Uvals':True,
-
-'cluster_tag':'cesup_fermi2',
+## scf example calculation, previous relaxed structure will be read automatically if they
+## are both in the calc_sets variable at the end. If you want to restart from scf calculation
+## though, you should specify relaxed structure file (out.prefix.relax, for example), in structure_filepath.
+calc_scf={
+'cluster_tag':'cesup_fermiNC',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
@@ -236,77 +170,144 @@ calc_scf_U={
 'ecutwfc':50,
 'scale_cutrho':6,
 #'run_specs':'local', ## if you want to run locally
+#'run_specs':'dryrun', ## dryrun for acbn0
 
-'CUSTOM':{'CONTROL':{'nstep':50},          
-          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
+'CUSTOM':{'CONTROL':{'nstep':100},
+          'SYSTEM':{'nspin':2,'input_dft':'pbe', 'degauss':0.002},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
 }
-
-
-
-calc_nscf_U={
-#'prefix':'NBNOCo_cU',
-'read_Uvals':True,
-
-'cluster_tag':'cesup_fermi2',
-'user':'raglamai',
-'nodes':1,
-'ncpus':24,
-'PPsufix':'gbrv_us.upf',
-'calculation':'nscf',
-'kgrid':(8,8,8),  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
-'kgrid_shift':(0,0,0),  ## kgrid shift 
-'ecutwfc':50,
-'scale_cutrho':6,
-#'run_specs':'local', ## if you want to run locally
-
-'CUSTOM':{'CONTROL':{'nstep':50},          
-          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
-          'ELECTRONS':{'mixing_beta':0.3},
-          'IONS':{},
-          'CELL':{}}
-}
-
-
-## nscf example calculation, only kgrid duplicated, nbnd  will be taken from previous
-## relax or scf calculation, if you want to start from nscf calculation, then give
-## also nbnd.
-#calc_nscf={
+## example for ACBN0 calculation 
+#calc_set_acbn0={
+#'cluster_tag':'cesup_fermiNC',
+#'user':'raglamai',
+#'nodes':1,
+#'ncpus':24,
+#'calculation':'acbn0',
+#
+#'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+#'kgrid_shift':(0,0,0),  ## kgrid shift 
+#'ecutwfc':70,
+#'scale_cutrho':4,
+##'run_specs':'local', ## if you want to run locally
+#
+#'CUSTOM':{'CONTROL':{'nstep':100},
+#          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
+#          'ELECTRONS':{'mixing_beta':0.3},
+#          'IONS':{},
+#          'CELL':{}}
+#}
+#
+#calc_relax_U={
+##'prefix':'NBNOCo_cU',
+#'read_Uvals':True,
+#
 #'cluster_tag':'cesup_fermi',
 #'user':'raglamai',
 #'nodes':1,
 #'ncpus':24,
 #'PPsufix':'gbrv_us.upf',
-#'calculation':'nscf',
-#'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+#'calculation':'vc-relax',
+#'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 #'kgrid_shift':(0,0,0),  ## kgrid shift 
-#'nbnd':235, ##only necessary if not continuing from previous scf or relax calculation
 #'ecutwfc':50,
 #'scale_cutrho':6,
-#'run_specs':'local', ## if you want to run locally
+##'run_specs':'local', ## if you want to run locally
 #
-#'CUSTOM':{'CONTROL':{'nstep':100},
-#          'SYSTEM':{'input_dft':'pbe'},
+#'CUSTOM':{'CONTROL':{'nstep':50},
+#          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
+#          'ELECTRONS':{'mixing_beta':0.3},
+#          'IONS':{},
+#          'CELL':{}}
+#}
+#
+#calc_scf_U={
+##'prefix':'NBNOCo_cU',
+#'read_Uvals':True,
+#
+#'cluster_tag':'cesup_fermi2',
+#'user':'raglamai',
+#'nodes':1,
+#'ncpus':24,
+#'PPsufix':'gbrv_us.upf',
+#'calculation':'scf',
+#'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+#'kgrid_shift':(0,0,0),  ## kgrid shift 
+#'ecutwfc':50,
+#'scale_cutrho':6,
+##'run_specs':'local', ## if you want to run locally
+#
+#'CUSTOM':{'CONTROL':{'nstep':50},          
+#          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
+#          'ELECTRONS':{'mixing_beta':0.3},
+#          'IONS':{},
+#          'CELL':{}}
+#}
+#
+#
+#
+#calc_nscf_U={
+##'prefix':'NBNOCo_cU',
+#'read_Uvals':True,
+#
+#'cluster_tag':'cesup_fermi2',
+#'user':'raglamai',
+#'nodes':1,
+#'ncpus':24,
+#'PPsufix':'gbrv_us.upf',
+#'calculation':'nscf',
+#'kgrid':(8,8,8),  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+#'kgrid_shift':(0,0,0),  ## kgrid shift 
+#'ecutwfc':50,
+#'scale_cutrho':6,
+##'run_specs':'local', ## if you want to run locally
+#
+#'CUSTOM':{'CONTROL':{'nstep':50},          
+#          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
 #          'ELECTRONS':{'mixing_beta':0.3},
 #          'IONS':{},
 #          'CELL':{}}
 #}
 
+
+## nscf example calculation, only kgrid duplicated, nbnd  will be taken from previous
+## relax or scf calculation, if you want to start from nscf calculation, then give
+## also nbnd.
+calc_nscf={
+'cluster_tag':'cesup_fermi',
+'user':'raglamai',
+'nodes':1,
+'ncpus':24,
+'PPsufix':'gbrv_us.upf',
+'calculation':'nscf',
+'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+'kgrid_shift':(0,0,0),  ## kgrid shift 
+#'nbnd':235, ##only necessary if not continuing from previous scf or relax calculation
+'ecutwfc':50,
+'scale_cutrho':6,
+#'run_specs':'local', ## if you want to run locally
+
+'CUSTOM':{'CONTROL':{'nstep':100},
+          'SYSTEM':{'nspin':2,'input_dft':'pbe', 'degauss':0.002},
+          'ELECTRONS':{'mixing_beta':0.3},
+          'IONS':{},
+          'CELL':{}}
+}
+
 ## bands calculation also gets nbnd from previous calculation, if starting directly from
 ## this nbnd should be specified to include some conduction band states. kgrid variables
 ## are not relevant for this calculation
-calc_bands_U={
-'read_Uvals':True,
+calc_bands={
+#'read_Uvals':True,
 
-'cluster_tag':'cesup_fermi2',
+'cluster_tag':'cesup_fermi',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
 'PPsufix':'gbrv_us.upf',
 'calculation':'bands',
-'structure_for_bands':'../KNbO3.cif',## for bands sometimes we want another structure to get integration path.
+#'structure_for_bands':'../KNbO3.cif',## for bands sometimes we want another structure to get integration path.
 'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 'kgrid_shift':(0,0,0),  ## kgrid shift 
 #'nbnd':235, ##only necessary if not continuing from previous scf or relax calculation
@@ -315,7 +316,7 @@ calc_bands_U={
 #'run_specs':'local', ## if you want to run locally
 
 'CUSTOM':{'CONTROL':{'nstep':100},          
-          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
+          'SYSTEM':{'nspin':2,'input_dft':'pbe', 'degauss':0.002},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
@@ -443,11 +444,10 @@ calc_sets=[]
 
 # for this calculation, relax1 and relax2 will be submitted in separated jobs, scf onwards will
 # all be executed in the same job.
-# calc_sets=[[calc_relax1],[calc_relax2],[calc_scf,calc_nscf,calc_bands,PP_sets1]]
-# if you don't want to run any calculation, for example, if only doing postprocessing, keep it as:
-# calc_sets=[[]]
 #calc_sets=[[calc_relax1],[calc_scf_dry,calc_set_acbn0,calc_relax_U],[calc_scf_U,calc_nscf_U,calc_bands_U,PP_sets1]]
-calc_sets=[[calc_relax_U],[calc_scf_U,calc_nscf_U,calc_bands_U,PP_sets1]]
+calc_sets=[[calc_relax1],[calc_relax2],[calc_scf,calc_nscf,calc_bands,PP_sets1]]
+# if you don't want to run any calculation, for example, if only doing postprocessing, keep it as:
+# calc_sets=[]
 
 
 #########################################################################################################
