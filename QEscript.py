@@ -9,7 +9,7 @@ output file. If you specify as a list, structures will run in sequence.
 """
 #########################################################################################################
 
-structures_filepath=["KBNOCo_c/KBNOCo_cU.scf.in"]
+structures_filepath=["structures/KBNO_cU.scf.in","structures/KBNOCo_cU.scf.in","structures/KBNOCoN_c2U.scf.in","structures/KBNON_cU.scf.in"]
 
 #########################################################################################################
 #########################################################################################################
@@ -27,8 +27,8 @@ def process_structure(struct_filepath):
     structure=read_structure(struct_filepath)
 
     ## extra modifications depending on what you need
-    #from MinFlow.special_functions import substitute_atom
-    #structure=substitute_atom(structure,'Si','Ge')
+    from MinFlow.special_functions import substitute_atom
+    structure=substitute_atom(structure,'Ba','Sr')
     return structure
 
 
@@ -49,11 +49,12 @@ automatic_prefix=False
 """
 Give the prefix for the structure to be calculated, you should give a list if 
 structure_filepath is also a list, prefix will be used to produce individual
-folder for the calculation.
+folder for the calculation. Use sameFolderRun=True to not create a new folder.
 """
 #########################################################################################################
 
-prefixes=["KBNOCo_c"]
+prefixes=["KSNO","KSNOCo","KSNOCoN","KSNON"]
+sameFolderRun=False
 
 
 #########################################################################################################
@@ -111,115 +112,210 @@ read_Uvals : if acbn0 calculation was performed and you want to read Uvals from 
 
 ## few steps of a relax calculation with coarse kgrid and lower cutoff
 calc_relax1={
-'cluster_tag':'cesup_fermi',
+'cluster_tag':'cesup_fermiNC',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
-'PPsufix':'gbrv_us.upf',
+#'PPsufix':'gbrv_us.upf',
 'calculation':'vc-relax',
 'kgrid':5,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 'kgrid_shift':(0,0,0),  ## kgrid shift 
-'ecutwfc':40,
-'scale_cutrho':6,
-'run_specs':'local', ## if you want to run locally
+'ecutwfc':70,
+'scale_cutrho':4,
+#'run_specs':'local', ## if you want to run locally
 ##'run_specs':'fermi_gpu_relax', ## specific for gpu relaxation
 
-'CUSTOM':{'CONTROL':{'nstep':10},
-          'SYSTEM':{'input_dft':'pbe'},
+'CUSTOM':{'CONTROL':{'nstep':5},
+          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
 }
 
-## a relax calculation with converged kgrid and cutoff
-calc_relax2={
-'cluster_tag':'cesup_fermi',
-'user':'raglamai',
-'nodes':1,
-'ncpus':24,
-'PPsufix':'gbrv_us.upf',
-'calculation':'vc-relax',
-'kgrid':5,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
-'kgrid_shift':(0,0,0),  ## kgrid shift 
-'ecutwfc':50,
-'scale_cutrho':6,
-'run_specs':'local', ## if you want to run locally
-##'run_specs':'fermi_gpu_relax', ## specific for gpu relaxation
-
-'CUSTOM':{'CONTROL':{'nstep':100},
-          'SYSTEM':{'input_dft':'pbe'},
-          'ELECTRONS':{'mixing_beta':0.3},
-          'IONS':{},
-          'CELL':{}}
-}
+### a relax calculation with converged kgrid and cutoff
+#calc_relax2={
+#'cluster_tag':'cesup_fermi',
+#'user':'raglamai',
+#'nodes':1,
+#'ncpus':24,
+#'PPsufix':'gbrv_us.upf',
+#'calculation':'vc-relax',
+#'kgrid':5,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+#'kgrid_shift':(0,0,0),  ## kgrid shift 
+#'ecutwfc':50,
+#'scale_cutrho':6,
+#'run_specs':'local', ## if you want to run locally
+###'run_specs':'fermi_gpu_relax', ## specific for gpu relaxation
+#
+#'CUSTOM':{'CONTROL':{'nstep':100},
+#          'SYSTEM':{'input_dft':'pbe'},
+#          'ELECTRONS':{'mixing_beta':0.3},
+#          'IONS':{},
+#          'CELL':{}}
+#}
+#
 
 ## scf example calculation, previous relaxed structure will be read automatically if they
 ## are both in the calc_sets variable at the end. If you want to restart from scf calculation
 ## though, you should specify relaxed structure file (out.prefix.relax, for example), in structure_filepath.
-calc_scf={
-'cluster_tag':'cesup_fermi',
+calc_scf_dry={
+'cluster_tag':'cesup_fermiNC',
+'user':'raglamai',
+'nodes':1,
+'ncpus':24,
+#'PPsufix':'gbrv_us.upf',
+'calculation':'scf',
+'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+'kgrid_shift':(0,0,0),  ## kgrid shift 
+'ecutwfc':70,
+'scale_cutrho':4,
+'run_specs':'dryrun', ## if you want to run locally
+
+'CUSTOM':{'CONTROL':{'nstep':100},
+          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
+          'ELECTRONS':{'mixing_beta':0.3},
+          'IONS':{},
+          'CELL':{}}
+}
+## example for ACBN0 calculation 
+calc_set_acbn0={
+'cluster_tag':'cesup_fermiNC',
+'user':'raglamai',
+'nodes':1,
+'ncpus':24,
+'calculation':'acbn0',
+
+'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+'kgrid_shift':(0,0,0),  ## kgrid shift 
+'ecutwfc':70,
+'scale_cutrho':4,
+#'run_specs':'local', ## if you want to run locally
+
+'CUSTOM':{'CONTROL':{'nstep':100},
+          'SYSTEM':{'input_dft':'pbesol', 'degauss':0.02},
+          'ELECTRONS':{'mixing_beta':0.3},
+          'IONS':{},
+          'CELL':{}}
+}
+
+calc_relax_U={
+#'prefix':'NBNOCo_cU',
+'read_Uvals':True,
+
+'cluster_tag':'cesup_fermi2',
+'user':'raglamai',
+'nodes':1,
+'ncpus':24,
+'PPsufix':'gbrv_us.upf',
+'calculation':'vc-relax',
+'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+'kgrid_shift':(0,0,0),  ## kgrid shift 
+'ecutwfc':50,
+'scale_cutrho':6,
+#'run_specs':'local', ## if you want to run locally
+
+'CUSTOM':{'CONTROL':{'nstep':50},
+          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
+          'ELECTRONS':{'mixing_beta':0.3},
+          'IONS':{},
+          'CELL':{}}
+}
+
+calc_scf_U={
+#'prefix':'NBNOCo_cU',
+'read_Uvals':True,
+
+'cluster_tag':'cesup_fermi2',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
 'PPsufix':'gbrv_us.upf',
 'calculation':'scf',
-'kgrid':10,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 'kgrid_shift':(0,0,0),  ## kgrid shift 
 'ecutwfc':50,
 'scale_cutrho':6,
-'run_specs':'local', ## if you want to run locally
+#'run_specs':'local', ## if you want to run locally
 
-'CUSTOM':{'CONTROL':{'nstep':100},
-          'SYSTEM':{'input_dft':'pbe'},
+'CUSTOM':{'CONTROL':{'nstep':50},          
+          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
 }
 
-## nscf example calculation, only kgrid duplicated, nbnd  will be taken from previous
-## relax or scf calculation, if you want to start from nscf calculation, then give
-## also nbnd.
-calc_nscf={
-'cluster_tag':'cesup_fermi',
+
+
+calc_nscf_U={
+#'prefix':'NBNOCo_cU',
+'read_Uvals':True,
+
+'cluster_tag':'cesup_fermi2',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
 'PPsufix':'gbrv_us.upf',
 'calculation':'nscf',
-'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+'kgrid':(8,8,8),  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 'kgrid_shift':(0,0,0),  ## kgrid shift 
-#'nbnd': ##only necessary if not continuing from previous scf or relax calculation
 'ecutwfc':50,
 'scale_cutrho':6,
-'run_specs':'local', ## if you want to run locally
+#'run_specs':'local', ## if you want to run locally
 
-'CUSTOM':{'CONTROL':{'nstep':100},
-          'SYSTEM':{'input_dft':'pbe'},
+'CUSTOM':{'CONTROL':{'nstep':50},          
+          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
 }
 
+
+## nscf example calculation, only kgrid duplicated, nbnd  will be taken from previous
+## relax or scf calculation, if you want to start from nscf calculation, then give
+## also nbnd.
+#calc_nscf={
+#'cluster_tag':'cesup_fermi',
+#'user':'raglamai',
+#'nodes':1,
+#'ncpus':24,
+#'PPsufix':'gbrv_us.upf',
+#'calculation':'nscf',
+#'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
+#'kgrid_shift':(0,0,0),  ## kgrid shift 
+#'nbnd':235, ##only necessary if not continuing from previous scf or relax calculation
+#'ecutwfc':50,
+#'scale_cutrho':6,
+#'run_specs':'local', ## if you want to run locally
+#
+#'CUSTOM':{'CONTROL':{'nstep':100},
+#          'SYSTEM':{'input_dft':'pbe'},
+#          'ELECTRONS':{'mixing_beta':0.3},
+#          'IONS':{},
+#          'CELL':{}}
+#}
+
 ## bands calculation also gets nbnd from previous calculation, if starting directly from
 ## this nbnd should be specified to include some conduction band states. kgrid variables
 ## are not relevant for this calculation
-calc_bands={
-'cluster_tag':'cesup_fermi',
+calc_bands_U={
+'read_Uvals':True,
+
+'cluster_tag':'cesup_fermi2',
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
 'PPsufix':'gbrv_us.upf',
 'calculation':'bands',
-#'structure_for_bands':'',## for bands sometimes we want another structure to get integration path.
+'structure_for_bands':'../KNbO3.cif',## for bands sometimes we want another structure to get integration path.
 'kgrid':15,  ## if integer given it is considered k_cutoff_length, otherwise use (x,x,x) 
 'kgrid_shift':(0,0,0),  ## kgrid shift 
-#'nbnd': ##only necessary if not continuing from previous scf or relax calculation
+#'nbnd':235, ##only necessary if not continuing from previous scf or relax calculation
 'ecutwfc':50,
 'scale_cutrho':6,
-'run_specs':'local', ## if you want to run locally
+#'run_specs':'local', ## if you want to run locally
 
-'CUSTOM':{'CONTROL':{'nstep':100},
-          'SYSTEM':{'input_dft':'pbe'},
+'CUSTOM':{'CONTROL':{'nstep':100},          
+          'SYSTEM':{'nspin':2,'input_dft':'pbesol', 'degauss':0.02},
           'ELECTRONS':{'mixing_beta':0.3},
           'IONS':{},
           'CELL':{}}
@@ -312,9 +408,8 @@ PP_sets1={
 'user':'raglamai',
 'nodes':1,
 'ncpus':24,
-#'prefix':'Si2',
 'pp_runs':"pp+bands",
-'run_specs':'local',
+#'run_specs':'local',
 }
 
 ## if you have more than one type of calculation in same structure folder
@@ -351,8 +446,8 @@ calc_sets=[]
 # calc_sets=[[calc_relax1],[calc_relax2],[calc_scf,calc_nscf,calc_bands,PP_sets1]]
 # if you don't want to run any calculation, for example, if only doing postprocessing, keep it as:
 # calc_sets=[[]]
-calc_sets=[[calc_relax1],[calc_relax2],[calc_scf,calc_nscf,calc_bands,PP_sets1]]
-#calc_sets=[]
+#calc_sets=[[calc_relax1],[calc_scf_dry,calc_set_acbn0,calc_relax_U],[calc_scf_U,calc_nscf_U,calc_bands_U,PP_sets1]]
+calc_sets=[[calc_relax_U],[calc_scf_U,calc_nscf_U,calc_bands_U,PP_sets1]]
 
 
 #########################################################################################################
@@ -370,19 +465,19 @@ There are also some options to customize plots of bands or PDOS.
 ## in this example, informations like charge geometry, gap, pdos and band plots will be generated,
 ## if there is more than one prefix you should specify through 'prefix' key.
 PP_processing={
-#'pp':"charge_geometry+gap+pdos+bands",
-'pp':"bands",
-'structure_for_bands':"../KNbO3.cif",
-'prefix':['KBNOCo_cU'],
+'pp':"charge_geometry+gap+pdos+bands",
+#'pp':"bands",
+'structure_for_bands':'../KNbO3.cif',
+#'prefix':['NBNOCo_cU'],
 'CUSTOMIZE_PLOT': {'fermi':0.0,
                'label':"",
                'color':"black",
-               'RANGE_VB':5,
-               'RANGE_CB':5,
-             'redstates':range(1,14),  ## states colored red, you can always give range(92,96)
+               'RANGE_VB':6,
+               'RANGE_CB':4,
+             'redstates':[],  ## states colored red, you can always give range(92,96)
              'greenstates':[],  ## states colored green
-             'bluestates':[],  ## states colored blue, no states with []
-             'labelsprojs':["Co","",""],  ## first red, second green, third blue
+             'bluestates':[], #range(188,192),  ## states colored blue, no states with []
+             'labelsprojs':["","",""],  ## first red, second green, third blue
 ## notice if there is overlapping colors will blend
              'maxcontrast':True,  ## notice if maxcontrast=0, color will be as strong as the state proportion, 
              #usually this contribution is very low compared to total, therefore maxcontrast is default.
@@ -429,15 +524,16 @@ for i, i_structure in enumerate(structures):
         prefix=get_name_from_structure(structure)
     else:
         prefix=prefixes[i]
-    ### make a prefix folder and cd to it ###
-    try:
-        os.mkdir(prefix) ## make prefix folder
-    except OSError as error: 
-        print(error)
-    try:
-        os.chdir(prefix)  ## enter prefix folder
-    except FileNotFoundError as error:
-        print(error)
+    if not sameFolderRun:
+        ### make a prefix folder and cd to it ###
+        try:
+            os.mkdir(prefix) ## make prefix folder
+        except OSError as error: 
+            print(error)
+        try:
+            os.chdir(prefix)  ## enter prefix folder
+        except FileNotFoundError as error:
+            print(error)
     
     run_first=False
     relaxed_structure=None
@@ -486,6 +582,8 @@ for i, i_structure in enumerate(structures):
                     prefix=calc_sets[i][j]['prefix']
                 if "PPsufix" in calc_sets[i][j].keys():
                     PPsufix=calc_sets[i][j]['PPsufix']
+                else:
+                    PPsufix=None
                 calculation=calc_sets[i][j]['calculation']
                 if "kgrid" in calc_sets[i][j].keys():
                     kgrid=calc_sets[i][j]['kgrid']
@@ -514,7 +612,15 @@ for i, i_structure in enumerate(structures):
 
                 ### get nbnd for nscf or bands calculation
                 if calculation in ["nscf","bands"]:
-                    if nbnd is not None:
+                    if nbnd is None:
+                        for i_calc in ["relax","vc-relax","scf"]:
+                            try:
+                                print(f"Reading nbnd from {'out.'+prefix+'.'+i_calc}.")
+                                nbnd=get_data_from_outQE('out.'+prefix+'.'+i_calc,'nbnd')
+                                print(f"nbnd is {nbnd}")
+                                break
+                            except Exception as e:
+                                print("couldnt read nbnd!",e)
                         nbnd=nbnd+0.2*nbnd
                     else:
                         print("nbnd not found and not given, specify nbnd beforehand, otherwise,\
@@ -551,7 +657,13 @@ for i, i_structure in enumerate(structures):
                                 calcdict['CUSTOM']['SYSTEM']['Hubbard_U('+str(idx+1)+')']=Uvals.get(element, 0.0)
                 #########################
                     if calcdict['calculation'] == 'bands':
-                        path=structure.cell.bandpath().interpolate(density=kpath_density) 
+                        if 'structure_for_bands' in calc_sets[i][j].keys():
+                            structure_bands=read_structure(calc_sets[i][j]['structure_for_bands'])
+                            print('diditrun',structure_bands)
+                        else:
+                            structure_bands=structure
+                        path=structure_bands.cell.bandpath().interpolate(density=kpath_density) 
+                        print(path)
                         calcdict['kpath']=path
                     if calculation == "absorption":
                         if "kgrid_for_absorption" in calc_sets[i][j].keys(): 
@@ -602,16 +714,6 @@ for i, i_structure in enumerate(structures):
                         calcs.extend(abscalcs)
                     if calculation == "relax" or calculation == 'vc-relax':
                         relaxed_structure=calc.output_file
-                    if calculation in ["relax","vc-relax","scf"] and run_first and nbnd is None:
-                        list_calcs=["relax","vc-relax","scf"]
-                        for i_calc in ["relax","vc-relax","scf"]:
-                            try:
-                                print(f"Reading nbnd from {'out.'+prefix+'.'+i_calc}.")
-                                nbnd=get_data_from_outQE('out.'+prefix+'.'+i_calc,'nbnd')
-                                print(f"nbnd is {nbnd}")
-                                break
-                            except Exception as e:
-                                print("couldnt read nbnd!",e)
                 else:
                     if calculation == "acbn0":
                         if 'run_specs' in calc_sets[i][j].keys():
@@ -639,6 +741,11 @@ for i, i_structure in enumerate(structures):
                 'nodes':nodes,'ncpus':ncpus}
             sh_file=QEcalculator.write_sh(**shdict)
             QEcalculator.run(sh_file,local=True)
+        elif run_specs == "dryrun":
+            shdict={'user':user,'job_name':calcs[0].prefix,'calcs':calcs, 'cluster':'local',
+                'nodes':nodes,'ncpus':ncpus}
+            sh_file=QEcalculator.write_sh(**shdict)
+#            QEcalculator.run(sh_file,local=True)
         elif run_specs == "fermi_gpu_relax":
             QEcalculator.run(sh_file,fermi_gpu=True)
         run_first=True

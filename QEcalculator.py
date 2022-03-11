@@ -13,6 +13,7 @@ import re
 import subprocess
 import os, shlex, sys,shutil, stat, signal
 import MinFlow.cluster_sets as cluster_sets
+from MinFlow.special_functions import set_element_magnetization
 from ase.dft.kpoints import BandPath
 
 class QEcalc:
@@ -78,13 +79,20 @@ class QEcalc:
         else:
             self.input_data['SYSTEM']['nbnd']=int(nbnd)
         
+        if self.input_data['SYSTEM']['nspin'] == 2:
+            element_1=self.structure.get_chemical_symbols()[0]
+            self.magmoms=set_element_magnetization(self.structure,element_1)
+            self.structure.set_initial_magnetic_moments(self.magmoms)
+        else:
+            self.magmoms=""
+
+
         ## these are filled when methods are applied
         self.input_file=""
         self.output_file=""
         self.relaxed_structure=""
         self.nelectron=""
         self.band_from_str=False
-        self.magmoms=""
         self.symbols=""
         
 
@@ -206,7 +214,6 @@ class QEcalc:
                     for relaxed in r:
                         ### codigo para ler magmons e colocar na structure
                         if isinstance(self.magmoms,np.ndarray):
-                            from MinFlow.special_functions import set_element_magnetization
                             for idx, symbol in enumerate(self.symbols):
                                 magmoms=set_element_magnetization(relaxed, symbol,
                                                           starting_mag=self.magmoms[idx])
